@@ -14,20 +14,34 @@ exports.handler = async (event) => {
  
   try {
     let response;
+ 
     if (event.httpMethod === 'GET') {
       const action = event.queryStringParameters?.action || 'getAll';
-      response = await fetch(`${SCRIPT_URL}?action=${action}`);
+      response = await fetch(`${SCRIPT_URL}?action=${action}`, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+ 
     } else if (event.httpMethod === 'POST') {
-      const body = event.body;
+      // Google Apps Script needs the body as a URL-encoded form parameter
+      // OR as raw text — we send as form data with 'data' key
+      const rawBody = event.body || '{}';
+      
+      // Send as application/x-www-form-urlencoded so GAS receives it in e.postData
+      const formData = new URLSearchParams();
+      formData.append('data', rawBody);
+ 
       response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+        redirect: 'follow'
       });
     }
  
     const text = await response.text();
     return { statusCode: 200, headers, body: text };
+ 
   } catch (err) {
     return {
       statusCode: 500,
@@ -36,4 +50,3 @@ exports.handler = async (event) => {
     };
   }
 };
- 
